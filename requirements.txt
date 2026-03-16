@@ -1,0 +1,5 @@
+SQLAlchemy~=2.0.48
+pip~=25.1.1
+greenlet~=3.3.2
+fastapi
+passlib[bcrypt]

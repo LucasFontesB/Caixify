@@ -1,10 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export default function PDV() {
   const [codigo, setCodigo] = useState("");
   const [itens, setItens] = useState([]);
   const [erro, setErro] = useState("");
+  const { setUsuario } = useAuth();
+  const navigate = useNavigate();
 
   const inputRef = useRef(null);
 
@@ -12,6 +16,15 @@ export default function PDV() {
   useEffect(() => {
     inputRef.current.focus();
   }, []);
+
+    const logout = () => {
+      if (!confirm("Deseja sair do sistema?")) return;
+
+      localStorage.removeItem("usuario");
+      localStorage.removeItem("token");
+      setUsuario(null);
+      navigate("/login");
+    };
 
   const adicionarProduto = async () => {
     if (!codigo) return;
@@ -91,6 +104,12 @@ export default function PDV() {
   return (
     <div style={styles.container}>
       <div style={styles.left}>
+          <div style={styles.header}>
+              <button style={styles.logoutBtn} onClick={logout}>
+                Sair 🚪
+              </button>
+            </div>
+
         <h2 style={styles.title}>PDV 🛒</h2>
 
         <input
@@ -160,6 +179,23 @@ export default function PDV() {
 }
 
 const styles = {
+
+    header: {
+      display: "flex",
+      justifyContent: "flex-end",
+      marginBottom: "10px"
+    },
+
+    logoutBtn: {
+      background: "#ef4444",
+      color: "#fff",
+      border: "none",
+      padding: "8px 14px",
+      borderRadius: "6px",
+      cursor: "pointer",
+      fontSize: "14px"
+    },
+
   container: {
     display: "flex",
     height: "100vh",

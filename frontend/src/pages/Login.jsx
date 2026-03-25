@@ -43,46 +43,120 @@ export default function Login() {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>Mercado Fácil</h1>
-        <p style={styles.subtitle}>Acesse sua conta</p>
+      <div style={styles.container}>
+        <div style={styles.left}>
+          <div style={styles.leftContent}>
+            <img
+              src="/Barcode.gif"
+              alt="Ilustração"
+              style={styles.image}
+            />
 
-        <form onSubmit={handleLogin} style={styles.form}>
-          <input
-            type="text"
-            placeholder="Usuário"
-            value={login}
-            onChange={(e) => setLogin(e.target.value)}
-            style={styles.input}
-          />
+            <h2 style={styles.leftTitle}>
+              Simplifique suas vendas
+            </h2>
 
-          <input
-            type="password"
-            placeholder="Senha"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-            style={styles.input}
-          />
+            <p style={styles.leftText}>
+              Controle estoque, vendas e lucros em um só lugar
+            </p>
+          </div>
+        </div>
 
-          {erro && <span style={styles.error}>{erro}</span>}
+        <div style={styles.right}>
+          <div style={styles.card}>
+              <h1 style={styles.logo}>Mercado Fácil</h1>
+            <p style={styles.subtitle}>Gestão inteligente para seu mercadinho</p>
+            <h2 style={styles.title}>Entrar</h2>
 
-          <button type="submit" style={styles.button} disabled={loading}>
-            {loading ? "Entrando..." : "Entrar"}
-          </button>
-        </form>
+            <form onSubmit={handleLogin} style={styles.form}>
+              <input
+                type="text"
+                placeholder="Usuário"
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
+                style={styles.input}
+              />
+
+              <input
+                type="password"
+                placeholder="Senha"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                style={styles.input}
+              />
+
+              {erro && <span style={styles.error}>{erro}</span>}
+
+              <button type="submit" style={styles.button} disabled={loading}>
+                {loading ? "Entrando..." : "Entrar"}
+              </button>
+            </form>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
 }
 
 const styles = {
+    logo: {
+      margin: 0,
+      fontSize: "22px",
+      fontWeight: "bold",
+      color: "#0f172a",
+      textAlign: "center"
+    },
+
+    subtitle: {
+      fontSize: "13px",
+      color: "#64748b",
+      textAlign: "center",
+      marginBottom: "10px"
+    },
+
   container: {
+    display: "flex",
     height: "100vh",
+    background: "#f1f5f9"
+  },
+
+  left: {
+    flex: 1.3,
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    background: "linear-gradient(135deg, #0f172a, #2563eb)"
+    background: "linear-gradient(135deg, #eef2ff, #e0f2fe)"
+  },
+
+    leftContent: {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: "10px"
+    },
+
+    leftTitle: {
+      color: "#1e293b",
+      fontSize: "18px",
+      marginTop: "10px"
+    },
+
+    leftText: {
+      color: "#64748b",
+      fontSize: "14px",
+      textAlign: "center",
+      maxWidth: "300px"
+    },
+
+  image: {
+      width: "90%",
+      maxWidth: "600px"
+    },
+
+  right: {
+    flex: 1,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center"
   },
 
   card: {
@@ -90,52 +164,49 @@ const styles = {
     padding: "40px",
     borderRadius: "16px",
     width: "320px",
-    boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+    boxShadow: "0 20px 60px rgba(0,0,0,0.08)",
     display: "flex",
     flexDirection: "column",
-    alignItems: "center"
+    gap: "20px"
   },
 
   title: {
     margin: 0,
+    textAlign: "center",
     color: "#0f172a"
   },
 
-  subtitle: {
-    marginBottom: "20px",
-    color: "#64748b",
-    fontSize: "14px"
-  },
-
   form: {
-    width: "100%",
     display: "flex",
     flexDirection: "column",
     gap: "12px"
   },
 
   input: {
-    padding: "12px",
-    borderRadius: "8px",
+    padding: "14px",
+    borderRadius: "10px",
     border: "1px solid #e2e8f0",
     outline: "none",
-    fontSize: "14px"
+    fontSize: "14px",
+    transition: "0.2s",
+    background: "#f8fafc"
   },
 
   button: {
     marginTop: "10px",
     padding: "12px",
-    borderRadius: "8px",
+    borderRadius: "10px",
     border: "none",
-    background: "#2563eb",
+    background: "linear-gradient(135deg, #7c3aed, #9333ea)",
     color: "#fff",
     fontWeight: "bold",
     cursor: "pointer",
-    transition: "0.2s"
+    transition: "0.3s"
   },
 
   error: {
     color: "#dc2626",
-    fontSize: "13px"
+    fontSize: "13px",
+    textAlign: "center"
   }
 };

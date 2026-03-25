@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.security import require_admin
 from app.database import get_db
 from app.models.produto import Produto
 from app.models.estoque import EstoqueMovimentacao
@@ -14,7 +15,7 @@ router = APIRouter(prefix="/estoque", tags=["Estoque"])
 def movimentar_estoque(
     dados: MovimentacaoCreate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user)
+    user=Depends(require_admin)
 ):
     produto = db.query(Produto).filter(
         Produto.id == dados.produto_id,

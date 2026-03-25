@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.auth import get_current_user
+from app.core.security import require_admin
 from app.database import get_db
 from app.models.empresa import Empresa
 from app.schemas.empresa_schema import EmpresaCreate, EmpresaResponse, EmpresaUpdate
@@ -15,11 +16,8 @@ router = APIRouter(
 def criar_empresa(
     empresa: EmpresaCreate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user)  # 🔐 obrigatório
+    user=Depends(require_admin)
 ):
-    if user["tipo"] != "admin":
-        raise HTTPException(status_code=403, detail="Sem permissão")
-
     nova_empresa = Empresa(**empresa.dict())
 
     db.add(nova_empresa)
@@ -60,7 +58,7 @@ def atualizar_empresa(
     empresa_id: int,
     dados: EmpresaUpdate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user)
+    user=Depends(require_admin)
 ):
     empresa = db.query(Empresa).filter(
         Empresa.id == empresa_id,

@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
+from app.core.security import require_admin
 from app.database import get_db
 from app.models.produto import Produto
 from app.schemas.produto_schema import ProdutoCreate, ProdutoResponse, ProdutoUpdate
@@ -13,7 +15,7 @@ router = APIRouter(prefix="/produtos", tags=["Produtos"])
 def criar_produto(
     dados: ProdutoCreate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user)
+    user=Depends(require_admin)
 ):
     produto = Produto(
         empresa_id=user["empresa_id"],  # 🔥 ESSENCIAL
@@ -55,7 +57,7 @@ def atualizar_produto(
     produto_id: int,
     dados: ProdutoUpdate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user)
+    user=Depends(require_admin)
 ):
     produto = db.query(Produto).filter(
         Produto.id == produto_id,

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.auth import get_current_user
-from app.core.security import hash_senha
+from app.core.security import hash_senha, require_admin
 from app.database import get_db
 from app.models.usuarios import Usuario
 from app.schemas.usuario_schema import UsuarioCreate, UsuarioResponse, UsuarioUpdate
@@ -15,7 +15,7 @@ router = APIRouter(
 def criar_usuario(
     usuario: UsuarioCreate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user)
+    user=Depends(require_admin)
 ):
     # 🔐 opcional: só admin pode criar
     if user.get("tipo") != "admin":
@@ -40,7 +40,7 @@ def atualizar_usuario(
     usuario_id: int,
     dados: UsuarioUpdate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user)
+    user=Depends(require_admin)
 ):
     usuario = db.query(Usuario).filter(
         Usuario.id == usuario_id,
@@ -62,7 +62,7 @@ def atualizar_usuario(
 def desativar_usuario(
     usuario_id: int,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user)
+    user=Depends(require_admin)
 ):
     usuario = db.query(Usuario).filter(
         Usuario.id == usuario_id,

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../services/api";
+import { tratarErroApi } from "../../services/errorHandler";
 
 export default function Produtos() {
   const [produtos, setProdutos] = useState([]);
@@ -13,6 +14,38 @@ export default function Produtos() {
     estoque_minimo: "",
     ativo: true
   });
+
+  const atualizarProduto = async () => {
+      if (!editando?.id) {
+        console.warn("Produto sem ID");
+        return;
+      }
+
+      try {
+        const payload = {
+          ...editando,
+          preco_venda: Number(editando.preco_venda) || 0,
+          preco_custo: Number(editando.preco_custo) || 0,
+          estoque_minimo: Number(editando.estoque_minimo) || 0
+        };
+
+        const { data } = await api.put(`/produtos/${editando.id}`, payload);
+
+        // 🔄 Atualiza a lista local sem precisar recarregar tudo
+        setProdutos((prev) =>
+          prev.map((p) => (p.id === data.id ? data : p))
+        );
+
+        setEditando(null);
+
+        // 🔔 Feedback elegante (substituir futuramente por toast)
+        console.log("Produto atualizado com sucesso");
+
+      } catch (error) {
+          const mensagem = tratarErroApi(error);
+          alert(mensagem);
+        }
+    };
 
   const carregarProdutos = async () => {
     const res = await api.get("/produtos");
@@ -240,9 +273,9 @@ export default function Produtos() {
       </div>
 
       <div style={styles.modalActions}>
-        <button style={styles.button} onClick={atualizarProduto}>
-          Salvar 💾
-        </button>
+        <button style={styles.button} onClick={() => {
+          atualizarProduto();
+        }}> Salvar 💾 </button>
 
         <button onClick={() => setEditando(null)}>
           Cancelar
@@ -254,18 +287,6 @@ export default function Produtos() {
   </>
 );
 }
-
-const atualizarProduto = async () => {
-  await api.put(`/produtos/${editando.id}`, {
-    ...editando,
-    preco_venda: Number(editando.preco_venda),
-    preco_custo: Number(editando.preco_custo),
-    estoque_minimo: Number(editando.estoque_minimo)
-  });
-
-  setEditando(null);
-  carregarProdutos();
-};
 
 const styles = {
 
@@ -307,7 +328,8 @@ const styles = {
       background: "rgba(0,0,0,0.5)",
       display: "flex",
       justifyContent: "center",
-      alignItems: "center"
+      alignItems: "center",
+      zIndex: 9999 // 🔥 ESSA LINHA
     },
 
     modal: {
@@ -317,7 +339,8 @@ const styles = {
       width: "320px",
       display: "flex",
       flexDirection: "column",
-      gap: "10px"
+      gap: "10px",
+      zIndex: 10000 // 🔥 GARANTE QUE FICA NA FRENTE
     },
 
     modalActions: {
@@ -347,12 +370,6 @@ const styles = {
     gridTemplateColumns: "1fr 1fr 1fr",
     gap: "10px",
     marginBottom: "15px"
-  },
-
-  checkbox: {
-    display: "flex",
-    alignItems: "center",
-    gap: "5px"
   },
 
   button: {

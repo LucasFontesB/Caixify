@@ -13,6 +13,7 @@ from app.models.despesa import Despesa, DespesaCategoria
 from app.schemas.caixa_schema import CaixaCreate, CaixaResponse
 from app.core.auth import get_current_user
 from app.core.security import require_admin
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/caixa", tags=["Caixa"])
 
@@ -24,6 +25,9 @@ def movimentar_caixa(
     db: Session = Depends(get_db),
     user=Depends(get_current_user)
 ):
+    if not caixa_esta_aberto(user["empresa_id"], db):
+        raise HTTPException(status_code=400, detail="Caixa não está aberto")
+
     if dados.tipo not in ["entrada", "saida"]:
         raise HTTPException(status_code=400, detail="Tipo inválido")
 
@@ -287,10 +291,12 @@ def status_caixa(db: Session = Depends(get_db), user=Depends(get_current_user)):
         "hora_fechamento": fechamento.data_movimentacao.isoformat() if fechamento else None,
     }
 
+class AbrirCaixaRequest(BaseModel):
+    saldo_inicial: Decimal = Decimal("0")
 
 # ── Abrir caixa ───────────────────────────────────────────────────────────────
 @router.post("/abrir")
-def abrir_caixa(saldo_inicial: Decimal = Query(default=0), db: Session = Depends(get_db), user=Depends(require_admin)):
+def abrir_caixa(dados: AbrirCaixaRequest, db: Session = Depends(get_db), user=Depends(require_admin)):
     hoje = date.today()
     inicio = datetime.combine(hoje, datetime.min.time())
     fim    = datetime.combine(hoje, datetime.max.time())
@@ -304,16 +310,19 @@ def abrir_caixa(saldo_inicial: Decimal = Query(default=0), db: Session = Depends
 
     db.add(CaixaMovimentacao(
         empresa_id=user["empresa_id"], usuario_id=user["user_id"],
-        tipo="entrada", valor=saldo_inicial,
+        tipo="entrada", valor=dados.saldo_inicial,
         forma_pagamento="dinheiro", descricao="abertura_caixa"
     ))
     db.commit()
-    return {"mensagem": "Caixa aberto com sucesso", "saldo_inicial": float(saldo_inicial)}
+    return {"mensagem": "Caixa aberto com sucesso", "saldo_inicial": float(dados.saldo_inicial)}
+
+class FecharCaixaRequest(BaseModel):
+    saldo_final: Decimal = Decimal("0")
 
 
 # ── Fechar caixa ──────────────────────────────────────────────────────────────
 @router.post("/fechar")
-def fechar_caixa(saldo_final: Decimal = Query(default=0), db: Session = Depends(get_db), user=Depends(require_admin)):
+def fechar_caixa(dados: FecharCaixaRequest, db: Session = Depends(get_db), user=Depends(require_admin)):
     hoje = date.today()
     inicio = datetime.combine(hoje, datetime.min.time())
     fim    = datetime.combine(hoje, datetime.max.time())
@@ -334,8 +343,24 @@ def fechar_caixa(saldo_final: Decimal = Query(default=0), db: Session = Depends(
 
     db.add(CaixaMovimentacao(
         empresa_id=user["empresa_id"], usuario_id=user["user_id"],
-        tipo="saida", valor=saldo_final,
+        tipo="saida", valor=dados.saldo_final,
         forma_pagamento="dinheiro", descricao="fechamento_caixa"
     ))
     db.commit()
-    return {"mensagem": "Caixa fechado com sucesso", "saldo_final": float(saldo_final)}
+    return {"mensagem": "Caixa fechado com sucesso", "saldo_final": float(dados.saldo_final)}
+
+def caixa_esta_aberto(empresa_id, db) -> bool:
+    hoje = date.today()
+    inicio = datetime.combine(hoje, datetime.min.time())
+    fim    = datetime.combine(hoje, datetime.max.time())
+    aberto = db.query(CaixaMovimentacao).filter(
+        CaixaMovimentacao.empresa_id == empresa_id,
+        CaixaMovimentacao.descricao == "abertura_caixa",
+        CaixaMovimentacao.data_movimentacao.between(inicio, fim)
+    ).first()
+    fechado = db.query(CaixaMovimentacao).filter(
+        CaixaMovimentacao.empresa_id == empresa_id,
+        CaixaMovimentacao.descricao == "fechamento_caixa",
+        CaixaMovimentacao.data_movimentacao.between(inicio, fim)
+    ).first()
+    return aberto is not None and fechado is None

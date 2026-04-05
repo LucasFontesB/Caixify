@@ -1,18 +1,22 @@
 from decimal import Decimal
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from typing import Optional
+import html
 
 from app.core.security import require_admin
 from app.database import get_db
 from app.models.produto import Produto
 from app.models.estoque import EstoqueMovimentacao
 from app.models.despesa import Despesa
-from app.models.caixa import CaixaMovimentacao
-from app.schemas.estoque_schema import MovimentacaoCreate, MovimentacaoResponse
-from app.core.auth import get_current_user
+from app.models.caixa import CaixaMovimentacao, Caixa
+from app.schemas.estoque_schema import (
+    MovimentacaoCreate,
+    MovimentacaoResponse,
+    MovimentacaoListResponse,
+    TipoMovimentacao,
+)
 
 router = APIRouter(prefix="/estoque", tags=["Estoque"])
 
@@ -23,42 +27,43 @@ def movimentar_estoque(
     db: Session = Depends(get_db),
     user=Depends(require_admin)
 ):
+    # ── Busca produto com lock para evitar race condition ─────────────────────
     produto = db.query(Produto).filter(
         Produto.id == dados.produto_id,
         Produto.empresa_id == user["empresa_id"]
-    ).first()
+    ).with_for_update().first()
 
     if not produto:
         raise HTTPException(status_code=404, detail="Produto não encontrado")
 
-    # ── Regras de movimentação ────────────────────────────────────────────────
-    if dados.tipo == "entrada":
-        produto.estoque += dados.quantidade
+    # ── Calcula novo estoque ──────────────────────────────────────────────────
+    if dados.tipo == TipoMovimentacao.entrada:
+        novo_estoque = produto.estoque + dados.quantidade
 
-    elif dados.tipo == "saida":
+    elif dados.tipo == TipoMovimentacao.saida:
         if produto.estoque < dados.quantidade:
             raise HTTPException(status_code=400, detail="Estoque insuficiente")
-        produto.estoque -= dados.quantidade
+        novo_estoque = produto.estoque - dados.quantidade
 
-    elif dados.tipo == "ajuste":
-        produto.estoque = dados.quantidade
+    elif dados.tipo == TipoMovimentacao.ajuste:
+        novo_estoque = dados.quantidade
 
-    else:
-        raise HTTPException(status_code=400, detail="Tipo inválido")
+    # ── Prepara objetos (sem adicionar ao DB ainda) ───────────────────────────
+    nome_seguro = html.escape(produto.nome[:100])
 
-    # ── Registra a movimentação ───────────────────────────────────────────────
     movimentacao = EstoqueMovimentacao(
         empresa_id=user["empresa_id"],
         produto_id=produto.id,
         tipo=dados.tipo,
         quantidade=dados.quantidade,
-        referencia=dados.referencia
+        referencia=dados.referencia,
     )
-    db.add(movimentacao)
 
-    # ── Entrada com valor → cria despesa ─────────────────────────────────────
+    despesa = None
+    receita = None
+
     if (
-        dados.tipo == "entrada"
+        dados.tipo == TipoMovimentacao.entrada
         and dados.registrar_despesa
         and dados.valor_unitario
         and dados.valor_unitario > 0
@@ -68,35 +73,60 @@ def movimentar_estoque(
             empresa_id=user["empresa_id"],
             usuario_id=user["user_id"],
             categoria_id=None,
-            descricao=f"Compra de estoque: {produto.nome} ({int(dados.quantidade)} un. × R$ {dados.valor_unitario:.2f})",
+            descricao=f"Compra de estoque: {nome_seguro} ({int(dados.quantidade)} un.)",
             valor=valor_total,
         )
-        db.add(despesa)
 
-    # ── Saída → cria receita no caixa ─────────────────────────────────────────
-    if dados.tipo == "saida" and dados.registrar_receita:
+    if dados.tipo == TipoMovimentacao.saida and dados.registrar_receita:
+        # ── Verifica caixa aberto antes de criar receita ──────────────────────
+        caixa_aberto = db.query(Caixa).filter(
+            Caixa.empresa_id == user["empresa_id"],
+            Caixa.status == "aberto"
+        ).first()
+        if not caixa_aberto:
+            raise HTTPException(
+                status_code=400,
+                detail="Não há caixa aberto para registrar receita"
+            )
+
         valor_receita = (produto.preco_venda or Decimal("0")) * dados.quantidade
         if valor_receita > 0:
             receita = CaixaMovimentacao(
+                caixa_id=caixa_aberto.id,
                 empresa_id=user["empresa_id"],
                 usuario_id=user["user_id"],
                 tipo="entrada",
                 valor=valor_receita,
                 forma_pagamento=None,
-                descricao=f"Saída de estoque: {produto.nome} ({int(dados.quantidade)} un.)",
+                descricao=f"Saída de estoque: {nome_seguro} ({int(dados.quantidade)} un.)",
             )
-            db.add(receita)
 
-    db.commit()
-    db.refresh(movimentacao)
+    # ── Persiste tudo atomicamente ────────────────────────────────────────────
+    try:
+        produto.estoque = novo_estoque
+        db.add(movimentacao)
+        if despesa:
+            db.add(despesa)
+        if receita:
+            db.add(receita)
+        db.commit()
+        db.refresh(movimentacao)
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Erro ao registrar movimentação"
+        )
+
     return movimentacao
 
 
-@router.get("/movimentacoes")
+@router.get("/movimentacoes", response_model=list[MovimentacaoListResponse])
 def listar_movimentacoes(
-    limite:     int           = Query(default=20, le=100),
-    produto_id: Optional[int] = Query(default=None),
-    tipo:       Optional[str] = Query(default=None),
+    limite:     int                    = Query(default=20, ge=1, le=100),
+    offset:     int                    = Query(default=0, ge=0),
+    produto_id: Optional[int]          = Query(default=None),
+    tipo:       Optional[TipoMovimentacao] = Query(default=None),  # Enum validado
     db: Session = Depends(get_db),
     user=Depends(require_admin)
 ):
@@ -107,13 +137,17 @@ def listar_movimentacoes(
     )
 
     if produto_id:
-        query = query.filter(EstoqueMovimentacao.produto_id == produto_id)
+        query = query.filter(
+            EstoqueMovimentacao.produto_id == produto_id,
+            Produto.empresa_id == user["empresa_id"]
+        )
     if tipo:
         query = query.filter(EstoqueMovimentacao.tipo == tipo)
 
     resultados = (
         query
         .order_by(desc(EstoqueMovimentacao.data_movimentacao))
+        .offset(offset)
         .limit(limite)
         .all()
     )

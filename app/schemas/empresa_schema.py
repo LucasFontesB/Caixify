@@ -26,4 +26,3 @@ class EmpresaUpdate(BaseModel):
     cnpj: str | None = None
     telefone: str | None = None
     endereco: str | None = None
-    ativo: bool | None = None

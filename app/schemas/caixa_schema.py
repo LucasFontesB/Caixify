@@ -1,7 +1,11 @@
 from pydantic import BaseModel
 from decimal import Decimal
 from datetime import datetime
+from enum import Enum
 
+class TipoMovimentacao(str, Enum):
+    entrada = "entrada"
+    saida = "saida"
 
 class CaixaCreate(BaseModel):
     tipo: str  # entrada / saida

@@ -94,7 +94,10 @@ def listar_despesas(
     if data_fim:
         query = query.filter(Despesa.data_despesa <= datetime.combine(data_fim, datetime.max.time()))
     if categoria_id:
-        query = query.filter(Despesa.categoria_id == categoria_id)
+        query = query.filter(
+            Despesa.categoria_id == categoria_id,
+            DespesaCategoria.empresa_id == user["empresa_id"]
+        )
 
     resultados = query.order_by(desc(Despesa.data_despesa)).limit(limite).all()
 

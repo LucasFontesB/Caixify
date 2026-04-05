@@ -13,6 +13,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.usuarios import Usuario
+from datetime import datetime, timedelta, timezone
 
 security = HTTPBearer()
 
@@ -50,7 +51,7 @@ def criar_token(data: dict):
 
     dados = data.copy()
 
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
     dados.update({"exp": expire})
 

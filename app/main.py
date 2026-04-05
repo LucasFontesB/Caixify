@@ -12,9 +12,15 @@ from app.routers import caixa
 from app.routers import despesas
 from app.routers import turnos
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="PDV SaaS")
 app.mount("/uploads", StaticFiles(directory="app/uploads"), name="uploads")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,

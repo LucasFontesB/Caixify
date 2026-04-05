@@ -4,3 +4,6 @@ greenlet~=3.3.2
 fastapi
 passlib[bcrypt]
 python-multipart~=0.0.22
+slowapi
+python-magic
+libmagic

@@ -4,9 +4,10 @@ from datetime import datetime
 
 
 class VendaCreate(BaseModel):
-    total: Decimal
-    desconto: Decimal = 0
+    total:           Decimal
+    desconto:        Decimal = 0
     forma_pagamento: str | None = None
+    turno_id:        int | None = None
 
 
 class VendaResponse(BaseModel):

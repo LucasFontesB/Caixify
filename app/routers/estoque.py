@@ -10,7 +10,7 @@ from app.database import get_db
 from app.models.produto import Produto
 from app.models.estoque import EstoqueMovimentacao
 from app.models.despesa import Despesa
-from app.models.caixa import CaixaMovimentacao, Caixa
+from app.models.caixa import CaixaMovimentacao ##, Caixa
 from app.schemas.estoque_schema import (
     MovimentacaoCreate,
     MovimentacaoResponse,

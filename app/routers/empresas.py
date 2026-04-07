@@ -10,6 +10,7 @@ import magic
 from pathlib import Path
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+from fastapi import Request
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -114,6 +115,7 @@ def atualizar_empresa(
 @router.post("/upload-logo")
 @limiter.limit("5/minute")
 async def upload_logo(
+    request: Request,
     file: UploadFile = File(...),
     user=Depends(get_current_user),
     db: Session = Depends(get_db)

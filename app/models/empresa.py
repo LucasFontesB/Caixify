@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Boolean, Text, TIMESTAMP
+
+from sqlalchemy import Column, Integer, String, Boolean, Text, TIMESTAMP, DateTime
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -17,3 +18,8 @@ class Empresa(Base):
     ativo = Column(Boolean, default=True)
 
     data_criacao = Column(TIMESTAMP, server_default=func.now())
+
+    plano = Column(String, default="basico")
+    motivo_bloqueio = Column(String, nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

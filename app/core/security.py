@@ -19,3 +19,5 @@ def require_superadmin(user=Depends(get_current_user)):
     if user["tipo"] != "superadmin":
         raise HTTPException(status_code=403, detail="Apenas superadmins podem criar empresas")
     return user
+
+DUMMY_HASH = pwd_context.hash("dummy_constant_para_timing_attack")

@@ -3,7 +3,12 @@ pip~=25.1.1
 greenlet~=3.3.2
 fastapi
 passlib[bcrypt]
+bcrypt==4.0.1
 python-multipart~=0.0.22
 slowapi
 python-magic
 libmagic
+python-dotenv
+python-jose
+psycopg2
+python-magic-bin

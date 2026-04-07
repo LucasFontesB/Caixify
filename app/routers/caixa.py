@@ -4,16 +4,17 @@ from sqlalchemy import func
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
-
 from app.database import get_db
 from app.models.caixa import CaixaMovimentacao
 from app.models.venda import Venda
 from app.models.venda_item import VendaItem
 from app.models.despesa import Despesa, DespesaCategoria
-from app.schemas.caixa_schema import CaixaCreate, CaixaResponse
 from app.core.auth import get_current_user
 from app.core.security import require_admin
-from pydantic import BaseModel
+from app.schemas.caixa_schema import (
+    CaixaCreate, CaixaResponse,
+    AbrirCaixaRequest, FecharCaixaRequest, ResumoDiaResponse, RelatorioPeriodoResponse, HistoricoItem
+)
 
 router = APIRouter(prefix="/caixa", tags=["Caixa"])
 
@@ -27,9 +28,6 @@ def movimentar_caixa(
 ):
     if not caixa_esta_aberto(user["empresa_id"], db):
         raise HTTPException(status_code=400, detail="Caixa não está aberto")
-
-    if dados.tipo not in ["entrada", "saida"]:
-        raise HTTPException(status_code=400, detail="Tipo inválido")
 
     movimentacao = CaixaMovimentacao(
         empresa_id=user["empresa_id"],
@@ -48,16 +46,20 @@ def movimentar_caixa(
 # ── Listar movimentações ─────────────────────────────────────────────────────
 @router.get("/", response_model=list[CaixaResponse])
 def listar_caixa(
+    limite: int = Query(default=50, le=200),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     user=Depends(get_current_user)
 ):
     return db.query(CaixaMovimentacao).filter(
         CaixaMovimentacao.empresa_id == user["empresa_id"]
-    ).order_by(CaixaMovimentacao.data_movimentacao.desc()).all()
+    ).order_by(
+        CaixaMovimentacao.data_movimentacao.desc()
+    ).offset(offset).limit(limite).all()
 
 
 # ── Histórico unificado ──────────────────────────────────────────────────────
-@router.get("/historico")
+@router.get("/historico", response_model=list[HistoricoItem])
 def historico_unificado(
     limite:      int            = Query(default=50, le=200),
     data_inicio: Optional[date] = Query(default=None),
@@ -120,7 +122,7 @@ def historico_unificado(
 
 
 # ── Resumo do dia ────────────────────────────────────────────────────────────
-@router.get("/resumo-dia")
+@router.get("/resumo-dia", response_model=ResumoDiaResponse)
 def resumo_dia(
     data: Optional[date] = Query(default=None),
     db: Session = Depends(get_db),
@@ -183,7 +185,7 @@ def resumo_dia(
 
 
 # ── Relatório por período ────────────────────────────────────────────────────
-@router.get("/relatorio")
+@router.get("/relatorio", response_model=RelatorioPeriodoResponse)
 def relatorio_periodo(
     data_inicio: date = Query(...),
     data_fim:    date = Query(...),
@@ -291,9 +293,6 @@ def status_caixa(db: Session = Depends(get_db), user=Depends(get_current_user)):
         "hora_fechamento": fechamento.data_movimentacao.isoformat() if fechamento else None,
     }
 
-class AbrirCaixaRequest(BaseModel):
-    saldo_inicial: Decimal = Decimal("0")
-
 # ── Abrir caixa ───────────────────────────────────────────────────────────────
 @router.post("/abrir")
 def abrir_caixa(dados: AbrirCaixaRequest, db: Session = Depends(get_db), user=Depends(require_admin)):
@@ -301,11 +300,13 @@ def abrir_caixa(dados: AbrirCaixaRequest, db: Session = Depends(get_db), user=De
     inicio = datetime.combine(hoje, datetime.min.time())
     fim    = datetime.combine(hoje, datetime.max.time())
 
-    if db.query(CaixaMovimentacao).filter(
+    abertura_existente = db.query(CaixaMovimentacao).filter(
         CaixaMovimentacao.empresa_id == user["empresa_id"],
         CaixaMovimentacao.descricao == "abertura_caixa",
         CaixaMovimentacao.data_movimentacao.between(inicio, fim)
-    ).first():
+    ).with_for_update().first()
+
+    if abertura_existente:
         raise HTTPException(status_code=400, detail="Caixa já foi aberto hoje")
 
     db.add(CaixaMovimentacao(
@@ -316,10 +317,6 @@ def abrir_caixa(dados: AbrirCaixaRequest, db: Session = Depends(get_db), user=De
     db.commit()
     return {"mensagem": "Caixa aberto com sucesso", "saldo_inicial": float(dados.saldo_inicial)}
 
-class FecharCaixaRequest(BaseModel):
-    saldo_final: Decimal = Decimal("0")
-
-
 # ── Fechar caixa ──────────────────────────────────────────────────────────────
 @router.post("/fechar")
 def fechar_caixa(dados: FecharCaixaRequest, db: Session = Depends(get_db), user=Depends(require_admin)):
@@ -327,18 +324,22 @@ def fechar_caixa(dados: FecharCaixaRequest, db: Session = Depends(get_db), user=
     inicio = datetime.combine(hoje, datetime.min.time())
     fim    = datetime.combine(hoje, datetime.max.time())
 
-    if not db.query(CaixaMovimentacao).filter(
+    abertura = db.query(CaixaMovimentacao).filter(
         CaixaMovimentacao.empresa_id == user["empresa_id"],
         CaixaMovimentacao.descricao == "abertura_caixa",
         CaixaMovimentacao.data_movimentacao.between(inicio, fim)
-    ).first():
+    ).with_for_update().first()
+
+    if not abertura:
         raise HTTPException(status_code=400, detail="Caixa não foi aberto hoje")
 
-    if db.query(CaixaMovimentacao).filter(
+    fechamento_existente = db.query(CaixaMovimentacao).filter(
         CaixaMovimentacao.empresa_id == user["empresa_id"],
         CaixaMovimentacao.descricao == "fechamento_caixa",
         CaixaMovimentacao.data_movimentacao.between(inicio, fim)
-    ).first():
+    ).with_for_update().first()
+
+    if fechamento_existente:
         raise HTTPException(status_code=400, detail="Caixa já foi fechado hoje")
 
     db.add(CaixaMovimentacao(
@@ -349,18 +350,16 @@ def fechar_caixa(dados: FecharCaixaRequest, db: Session = Depends(get_db), user=
     db.commit()
     return {"mensagem": "Caixa fechado com sucesso", "saldo_final": float(dados.saldo_final)}
 
-def caixa_esta_aberto(empresa_id, db) -> bool:
-    hoje = date.today()
+def caixa_esta_aberto(empresa_id: int, db: Session) -> bool:
+    hoje   = date.today()
     inicio = datetime.combine(hoje, datetime.min.time())
     fim    = datetime.combine(hoje, datetime.max.time())
-    aberto = db.query(CaixaMovimentacao).filter(
+
+    registros = db.query(CaixaMovimentacao.descricao).filter(
         CaixaMovimentacao.empresa_id == empresa_id,
-        CaixaMovimentacao.descricao == "abertura_caixa",
+        CaixaMovimentacao.descricao.in_(["abertura_caixa", "fechamento_caixa"]),
         CaixaMovimentacao.data_movimentacao.between(inicio, fim)
-    ).first()
-    fechado = db.query(CaixaMovimentacao).filter(
-        CaixaMovimentacao.empresa_id == empresa_id,
-        CaixaMovimentacao.descricao == "fechamento_caixa",
-        CaixaMovimentacao.data_movimentacao.between(inicio, fim)
-    ).first()
-    return aberto is not None and fechado is None
+    ).all()
+
+    operacoes = {r.descricao for r in registros}
+    return "abertura_caixa" in operacoes and "fechamento_caixa" not in operacoes

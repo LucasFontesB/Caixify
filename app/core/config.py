@@ -15,6 +15,14 @@ ALGORITHM = os.getenv("ALGORITHM")
 if not ALGORITHM:
     raise RuntimeError("ALGORITHM não definida nas variáveis de ambiente!")
 
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 if not ACCESS_TOKEN_EXPIRE_MINUTES:
     raise RuntimeError("ACCESS_TOKEN_EXPIRE_MINUTES não definida nas variáveis de ambiente!")
+
+REDIS_HOST = os.getenv("REDIS_HOST")
+if not REDIS_HOST:
+    raise RuntimeError("REDIS_HOST não definida nas variáveis de ambiente!")
+
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")

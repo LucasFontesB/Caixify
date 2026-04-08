@@ -26,3 +26,6 @@ class UsuarioUpdate(BaseModel):
     login: str | None = None
     tipo: str | None = None
     ativo: bool | None = None
+
+class SenhaUpdate(BaseModel):
+    senha: str

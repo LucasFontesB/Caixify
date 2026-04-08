@@ -52,7 +52,7 @@ export default function Produtos() {
   // ── Carrega produtos ──────────────────────────────────────────────────────
   const carregarProdutos = useCallback(async () => {
     try {
-      const res = await api.get("/produtos");
+      const res = await api.get("/produtos/");
       setProdutos(res.data);
     } catch (error) {
       setErro(tratarErroApi(error));
@@ -88,7 +88,7 @@ export default function Produtos() {
     } finally {
       setSalvando(false);
     }
-  };
+};
 
   // ── Atualizar produto ─────────────────────────────────────────────────────
   const atualizarProduto = async () => {

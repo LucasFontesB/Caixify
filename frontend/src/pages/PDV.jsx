@@ -366,7 +366,7 @@ export default function PDV() {
 
   useEffect(() => {
     async function carregarProdutos() {
-      try { const res = await api.get("/produtos"); setProdutos(res.data); }
+      try { const res = await api.get("/produtos/"); setProdutos(res.data); }
       catch (e) { console.error(e); }
     }
     carregarProdutos();
@@ -467,7 +467,7 @@ export default function PDV() {
       try {
         const totalFinal = Math.max(0, total - desconto);
 
-        const response = await api.post("/vendas", {
+        const response = await api.post("/vendas/", {
           total:           totalFinal,
           desconto:        desconto,
           forma_pagamento: formaPagamento,
@@ -600,7 +600,7 @@ export default function PDV() {
         <div style={s.right}>
           <div style={s.empresaBox}>
             {logo
-              ? <img src={`http://127.0.0.1:8000${logo}`} alt={`Logo ${empresa}`} style={s.logoImg} />
+              ? <img src={`https://caixify.com.br${logo}`} alt={`Logo ${empresa}`} style={s.logoImg} />
               : <div style={s.empresaAvatar}>{empresa?.charAt(0)?.toUpperCase() ?? "E"}</div>
             }
             <span style={s.empresaNome}>{empresa}</span>

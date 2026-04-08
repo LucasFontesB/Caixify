@@ -31,10 +31,10 @@ export default function Cupom({ venda, empresa, logo, cnpj, contato, operador })
       <div style={c.centro}>
         {logo && (
           <img
-            src={`http://127.0.0.1:8000${logo}`}
-            alt="Logo"
-            style={c.logo}
-          />
+              src={`https://caixify.com.br${logo}`}
+              alt="Logo"
+              style={c.logo}
+            />
         )}
         <div style={c.empresaNome}>{empresa ?? "MINHA LOJA"}</div>
         {cnpj    && <div style={c.info}>CNPJ: {cnpj}</div>}

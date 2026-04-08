@@ -93,4 +93,5 @@ def me(user=Depends(get_current_user), db: Session = Depends(get_db)):
         empresa_id=usuario_db.empresa_id,
         tipo=usuario_db.tipo,
         empresa_nome=empresa.nome,
+        empresa_logo=empresa.logo_url,
     )

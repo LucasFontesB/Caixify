@@ -84,7 +84,7 @@ export default function Estoque() {
   // ── Carregamentos ───────────────────────────────────────────────────────────
   const carregarProdutos = useCallback(async () => {
     try {
-      const res = await api.get("/produtos");
+      const res = await api.get("/produtos/");
       setProdutos(res.data);
     } catch (error) {
       setErro(tratarErroApi(error));
@@ -93,7 +93,7 @@ export default function Estoque() {
 
   const carregarMovimentacoes = useCallback(async () => {
     try {
-      const res = await api.get("/estoque/movimentacoes");
+      const res = await api.get("/estoque/movimentacoes/");
       setMovimentacoes(res.data);
     } catch (error) {
       setErro(tratarErroApi(error));
@@ -154,7 +154,7 @@ export default function Estoque() {
     setSucesso("");
 
     try {
-      await api.post("/estoque/movimentar", {
+      await api.post("/estoque/movimentar/", {
         produto_id:        Number(form.produto_id),
         tipo:              form.tipo,
         quantidade:        Number(form.quantidade),

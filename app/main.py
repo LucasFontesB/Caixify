@@ -21,6 +21,7 @@ from slowapi.errors import RateLimitExceeded
 
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="PDV SaaS")
+app.router.redirect_slashes = False
 app.mount("/uploads", StaticFiles(directory="app/uploads"), name="uploads")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -29,7 +30,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "http://127.0.0.1:5173"
+        "http://127.0.0.1:5173",
+        "https://app.caixify.com.br",
+        "https://caixify.com.br",
+        "https://www.caixify.com.br",
     ],
     allow_credentials=True,
     allow_methods=["*"],

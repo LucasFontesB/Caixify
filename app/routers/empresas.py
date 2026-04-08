@@ -141,7 +141,7 @@ async def upload_logo(
     # 3. Só agora salvar o arquivo
     ext_map = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
     ext = ext_map[mime_type]
-    upload_dir = Path("storage/logos")
+    upload_dir = Path("app/uploads/empresas")
     upload_dir.mkdir(parents=True, exist_ok=True)
 
     for old_ext in ["jpg", "png", "webp"]:

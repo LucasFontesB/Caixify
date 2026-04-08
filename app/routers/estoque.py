@@ -10,7 +10,7 @@ from app.database import get_db
 from app.models.produto import Produto
 from app.models.estoque import EstoqueMovimentacao
 from app.models.despesa import Despesa
-from app.models.caixa import CaixaMovimentacao ##, Caixa
+from app.models.caixa import CaixaMovimentacao, Caixa
 from app.schemas.estoque_schema import (
     MovimentacaoCreate,
     MovimentacaoResponse,
@@ -21,13 +21,12 @@ from app.schemas.estoque_schema import (
 router = APIRouter(prefix="/estoque", tags=["Estoque"])
 
 
-@router.post("/movimentar", response_model=MovimentacaoResponse)
+@router.post("/movimentar/", response_model=MovimentacaoResponse)
 def movimentar_estoque(
     dados: MovimentacaoCreate,
     db: Session = Depends(get_db),
     user=Depends(require_admin)
 ):
-    # ── Busca produto com lock para evitar race condition ─────────────────────
     produto = db.query(Produto).filter(
         Produto.id == dados.produto_id,
         Produto.empresa_id == user["empresa_id"]
@@ -36,19 +35,15 @@ def movimentar_estoque(
     if not produto:
         raise HTTPException(status_code=404, detail="Produto não encontrado")
 
-    # ── Calcula novo estoque ──────────────────────────────────────────────────
     if dados.tipo == TipoMovimentacao.entrada:
         novo_estoque = produto.estoque + dados.quantidade
-
     elif dados.tipo == TipoMovimentacao.saida:
         if produto.estoque < dados.quantidade:
             raise HTTPException(status_code=400, detail="Estoque insuficiente")
         novo_estoque = produto.estoque - dados.quantidade
-
     elif dados.tipo == TipoMovimentacao.ajuste:
         novo_estoque = dados.quantidade
 
-    # ── Prepara objetos (sem adicionar ao DB ainda) ───────────────────────────
     nome_seguro = html.escape(produto.nome[:100])
 
     movimentacao = EstoqueMovimentacao(
@@ -78,21 +73,9 @@ def movimentar_estoque(
         )
 
     if dados.tipo == TipoMovimentacao.saida and dados.registrar_receita:
-        # ── Verifica caixa aberto antes de criar receita ──────────────────────
-        caixa_aberto = db.query(Caixa).filter(
-            Caixa.empresa_id == user["empresa_id"],
-            Caixa.status == "aberto"
-        ).first()
-        if not caixa_aberto:
-            raise HTTPException(
-                status_code=400,
-                detail="Não há caixa aberto para registrar receita"
-            )
-
         valor_receita = (produto.preco_venda or Decimal("0")) * dados.quantidade
         if valor_receita > 0:
             receita = CaixaMovimentacao(
-                caixa_id=caixa_aberto.id,
                 empresa_id=user["empresa_id"],
                 usuario_id=user["user_id"],
                 tipo="entrada",
@@ -101,7 +84,6 @@ def movimentar_estoque(
                 descricao=f"Saída de estoque: {nome_seguro} ({int(dados.quantidade)} un.)",
             )
 
-    # ── Persiste tudo atomicamente ────────────────────────────────────────────
     try:
         produto.estoque = novo_estoque
         db.add(movimentacao)
@@ -113,15 +95,12 @@ def movimentar_estoque(
         db.refresh(movimentacao)
     except Exception:
         db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail="Erro ao registrar movimentação"
-        )
+        raise HTTPException(status_code=500, detail="Erro ao registrar movimentação")
 
     return movimentacao
 
 
-@router.get("/movimentacoes", response_model=list[MovimentacaoListResponse])
+@router.get("/movimentacoes/", response_model=list[MovimentacaoListResponse])
 def listar_movimentacoes(
     limite:     int                    = Query(default=20, ge=1, le=100),
     offset:     int                    = Query(default=0, ge=0),

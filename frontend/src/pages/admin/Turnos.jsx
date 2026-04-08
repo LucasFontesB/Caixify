@@ -39,7 +39,7 @@ export default function Turnos() {
   // ── Carregamentos ───────────────────────────────────────────────────────────
   const carregarUsuarios = useCallback(async () => {
     try {
-      const res = await api.get("/usuarios");
+      const res = await api.get("/usuarios/");
       setUsuarios(res.data);
     } catch (error) {
       setErro(tratarErroApi(error));

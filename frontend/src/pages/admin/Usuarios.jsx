@@ -90,7 +90,7 @@ export default function Usuarios() {
   // ── Carregar ────────────────────────────────────────────────────────────────
   const carregarUsuarios = useCallback(async () => {
     try {
-      const res = await api.get("/usuarios");
+      const res = await api.get("/usuarios/");
       setUsuarios(res.data);
     } catch (error) {
       setErro(tratarErroApi(error));

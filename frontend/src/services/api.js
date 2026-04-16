@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "https://caixify.com.br/api"
+  baseURL: import.meta.env.VITE_API_URL
 });
 
 // 🔐 envia token automaticamente

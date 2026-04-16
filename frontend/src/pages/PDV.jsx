@@ -326,6 +326,7 @@ function ModalPagamento({ totalBruto, onConfirmar, onCancelar }) {
 
 // ─── Componente principal ───────────────────────────────────────────────────
 export default function PDV() {
+    const [showShortcuts, setShowShortcuts]   = useState(true);
   const [itens, setItens]                     = useState([]);
   const [erro, setErro]                       = useState("");
   const [busca, setBusca]                     = useState("");
@@ -365,8 +366,43 @@ export default function PDV() {
   useEffect(() => { if (turno) inputRef.current?.focus(); }, [turno]);
 
   useEffect(() => {
+      const handleKeyDown = (e) => {
+        // F2 → foca no campo de busca
+        if (e.key === "F2") {
+          e.preventDefault();
+          inputRef.current?.focus();
+        }
+
+        // F10 → finalizar venda
+        if (e.key === "F10") {
+          e.preventDefault();
+          if (itens.length > 0) validarEAbrirPagamento();
+        }
+
+        // Esc → fechar modal de pagamento
+        if (e.key === "Escape" && showPagamento) {
+          setShowPagamento(false);
+        }
+
+        // Delete → remover último item
+        if (e.key === "Delete" && itens.length > 0 && document.activeElement === inputRef.current) {
+          removerItem(itens.length - 1);
+        }
+
+        // F4 → fechar turno
+        if (e.key === "F4") {
+          e.preventDefault();
+          logout();
+        }
+      };
+
+      window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [itens, showPagamento, turno]);
+
+  useEffect(() => {
     async function carregarProdutos() {
-      try { const res = await api.get("/produtos/"); setProdutos(res.data); }
+      try { const res = await api.get("/produtos"); setProdutos(res.data); }
       catch (e) { console.error(e); }
     }
     carregarProdutos();
@@ -473,6 +509,8 @@ export default function PDV() {
           forma_pagamento: formaPagamento,
           turno_id:        turno?.id ?? null,
         });
+
+        console.log("resposta vendas:", response.data);
 
         const vendaId = response.data.id;
 
@@ -600,7 +638,7 @@ export default function PDV() {
         <div style={s.right}>
           <div style={s.empresaBox}>
             {logo
-              ? <img src={`https://caixify.com.br${logo}`} alt={`Logo ${empresa}`} style={s.logoImg} />
+              ? <img src={`${import.meta.env.VITE_STORAGE_URL}${logo}`} alt={`Logo ${empresa}`} style={s.logoImg} />
               : <div style={s.empresaAvatar}>{empresa?.charAt(0)?.toUpperCase() ?? "E"}</div>
             }
             <span style={s.empresaNome}>{empresa}</span>
@@ -622,6 +660,30 @@ export default function PDV() {
           >
             <IconArrow /> Finalizar Venda
           </button>
+
+          <div style={s.shortcutsSection}>
+          <div style={s.shortcutsHeader} onClick={() => setShowShortcuts(p => !p)}>
+            <span style={s.shortcutsTitle}>ATALHOS DO TECLADO</span>
+            <span style={s.shortcutsToggle}>{showShortcuts ? "ocultar ▲" : "mostrar ▼"}</span>
+          </div>
+          {showShortcuts && (
+            <div style={s.shortcutsList}>
+              {[
+                ["Buscar produto",     "F2"],
+                ["Finalizar venda",    "F10"],
+                ["Cancelar modal",     "Esc"],
+                ["Remover último item","Del"],
+                ["Fechar turno",       "F4"],
+              ].map(([label, key]) => (
+                <div key={key} style={s.shortcutRow}>
+                  <span style={s.shortcutLabel}>{label}</span>
+                  <kbd style={s.kbd}>{key}</kbd>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         </div>
       </div>
 
@@ -694,6 +756,15 @@ const mp = {
 const DARK = "#0f172a";
 
 const s = {
+
+  shortcutsSection: { borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "14px", flexShrink: 0 },
+    shortcutsHeader:  { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", cursor: "pointer" },
+    shortcutsTitle:   { fontSize: "11px", fontWeight: "600", color: "#334155", letterSpacing: "1.5px" },
+    shortcutsToggle:  { fontSize: "11px", color: "#475569", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" },
+    shortcutsList:    { display: "flex", flexDirection: "column", gap: "2px" },
+    shortcutRow:      { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0" },
+    shortcutLabel:    { fontSize: "12px", color: "#64748b" },
+kbdDark:          { background: "#1e293b", border: "1px solid #334155", borderBottomWidth: "2px", borderRadius: "5px", padding: "2px 7px", fontSize: "11px", fontWeight: "500", color: "#94a3b8", fontFamily: "inherit" },
   container:   { display: "flex", height: "100vh", background: "#f1f5f9", overflow: "hidden" },
   left:        { flex: 3, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 },
   topbar:      { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", background: "#ffffff", borderBottom: "1px solid #e2e8f0", flexShrink: 0 },

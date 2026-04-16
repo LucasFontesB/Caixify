@@ -6,6 +6,17 @@ import { tratarErroApi } from "../../services/errorHandler";
 const brl = (valor) =>
   Number(valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+const parseBRL = (valor) => {
+  const str = String(valor).trim();
+  // Se já é número válido com ponto decimal (vindo do banco): "10.5", "1050.00"
+  if (/^\d+(\.\d+)?$/.test(str)) return Number(str);
+  // Se o usuário digitou com vírgula: "10,50" ou "1.050,00"
+  return Number(str.replace(/\./g, "").replace(",", ".")) || 0;
+};
+
+const formatarParaInput = (valor) =>
+  Number(valor).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 // ─── Estado inicial do formulário ────────────────────────────────────────────
 const FORM_VAZIO = {
   nome: "",
@@ -76,8 +87,8 @@ export default function Produtos() {
     try {
       await api.post("/produtos/", {
         ...form,
-        preco_venda:    Number(form.preco_venda)    || 0,
-        preco_custo:    Number(form.preco_custo)    || 0,
+        preco_venda:    parseBRL(form.preco_venda),
+        preco_custo:    parseBRL(form.preco_custo),
         estoque_minimo: Number(form.estoque_minimo) || 0,
       });
 
@@ -100,8 +111,8 @@ export default function Produtos() {
     try {
       const payload = {
         ...editando,
-        preco_venda:    Number(editando.preco_venda)    || 0,
-        preco_custo:    Number(editando.preco_custo)    || 0,
+        preco_venda:    parseBRL(editando.preco_venda),
+        preco_custo:    parseBRL(editando.preco_custo),
         estoque_minimo: Number(editando.estoque_minimo) || 0,
       };
 
@@ -267,7 +278,11 @@ export default function Produtos() {
                         }
                       </td>
                       <td style={s.td}>
-                        <button style={s.btnEdit} onClick={() => setEditando(p)}>
+                        <button style={s.btnEdit} onClick={() => setEditando({
+                                                          ...p,
+                                                          preco_venda: formatarParaInput(p.preco_venda),
+                                                          preco_custo: formatarParaInput(p.preco_custo),
+                                                        })}>
                           <IconEdit />
                           Editar
                         </button>

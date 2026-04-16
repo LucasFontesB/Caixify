@@ -18,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+import os
 
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="PDV SaaS")
@@ -40,17 +41,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(empresas.router)
-app.include_router(auth.router)
-app.include_router(usuarios.router)
-app.include_router(teste.router)
-app.include_router(produtos.router)
-app.include_router(estoque.router)
-app.include_router(vendas.router)
-app.include_router(venda_itens.router)
-app.include_router(caixa.router)
-app.include_router(despesas.router)
-app.include_router(turnos.router)
-app.include_router(superadmin_empresas_router)
-app.include_router(superadmin_faturas_router)
-app.include_router(superadmin_logs_router)
+API_PREFIX = os.getenv("API_PREFIX", "")
+
+app.include_router(empresas.router, prefix=API_PREFIX)
+app.include_router(auth.router, prefix=API_PREFIX)
+app.include_router(usuarios.router, prefix=API_PREFIX)
+app.include_router(teste.router, prefix=API_PREFIX)
+app.include_router(produtos.router, prefix=API_PREFIX)
+app.include_router(estoque.router, prefix=API_PREFIX)
+app.include_router(vendas.router, prefix=API_PREFIX)
+app.include_router(venda_itens.router, prefix=API_PREFIX)
+app.include_router(caixa.router, prefix=API_PREFIX)
+app.include_router(despesas.router, prefix=API_PREFIX)
+app.include_router(turnos.router, prefix=API_PREFIX)
+app.include_router(superadmin_empresas_router, prefix=API_PREFIX)
+app.include_router(superadmin_faturas_router, prefix=API_PREFIX)
+app.include_router(superadmin_logs_router, prefix=API_PREFIX)

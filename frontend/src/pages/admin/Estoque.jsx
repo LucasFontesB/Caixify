@@ -83,6 +83,7 @@ export default function Estoque() {
 
   // ── Carregamentos ───────────────────────────────────────────────────────────
   const carregarProdutos = useCallback(async () => {
+<<<<<<< HEAD
     try {
       const res = await api.get("/produtos/");
       setProdutos(res.data);
@@ -99,6 +100,26 @@ export default function Estoque() {
       setErro(tratarErroApi(error));
     }
   }, []);
+=======
+      try {
+        const res = await api.get("/produtos/");
+        console.log("produtos:", res.data); // ← adiciona isso
+        setProdutos(Array.isArray(res.data) ? res.data : []);
+      } catch (error) {
+        setErro(tratarErroApi(error));
+      }
+    }, []);
+
+  const carregarMovimentacoes = useCallback(async () => {
+      try {
+        const res = await api.get("/estoque/movimentacoes");
+        console.log("movimentacoes:", res.data); // ← adiciona isso
+        setMovimentacoes(Array.isArray(res.data) ? res.data : []);
+      } catch (error) {
+        setErro(tratarErroApi(error));
+      }
+    }, []);
+>>>>>>> ff90880 (aoihn)
 
   useEffect(() => {
     carregarProdutos();

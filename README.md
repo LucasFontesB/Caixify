@@ -130,7 +130,7 @@ Cliente → Nginx (443) → strip /api → FastAPI (8000) → PostgreSQL
 
 ```bash
 # Clone o repositório
-git clone https://github.com/seu-usuario/caixify.git
+git clone https://github.com/LucasFontesB/Caixify.git
 cd caixify
 
 # Crie e ative o ambiente virtual
